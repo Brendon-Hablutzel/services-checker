@@ -1,9 +1,11 @@
-import requests
 import os
 import sys
-from tqdm import tqdm
+import asyncio
+import aiohttp
+import time
 
 SERVICES_FILE = "services.txt"
+EDITOR_CMD = "/usr/bin/editor"
 
 
 def get_services_file_abspath():
@@ -11,7 +13,16 @@ def get_services_file_abspath():
     return os.path.join(current_dir_path, SERVICES_FILE)
 
 
-def check_services():
+async def check_service(session: aiohttp.ClientSession, url: str):
+    res = await session.get(url)
+    res_status = res.status
+    if res_status == 200:
+        print(f"ONLINE [{res_status}] {url}")
+    else:
+        print(f"OFFLINE [{res_status}] {url}")
+
+
+async def check_services():
     services_file = get_services_file_abspath()
 
     if not os.path.exists(services_file):
@@ -23,37 +34,20 @@ def check_services():
 
     print("CHECKING SERVICES...")
 
-    online: list[tuple[str, int]] = []
-    offline: list[tuple[str, int]] = []
-
+    lines = []
     with open(services_file, "r") as f:
         lines = f.readlines()
-        num_lines = len(lines)
 
-        for line_index in tqdm(range(num_lines), leave=True):
-            url = lines[line_index].strip()
-            res = requests.get(url)
-            if res.status_code == 200:
-                online.append((url, res.status_code))
-            else:
-                offline.append((url, res.status_code))
+    async with aiohttp.ClientSession() as session:
+        tasks = [check_service(session, line.strip()) for line in lines]
+        await asyncio.gather(*tasks, return_exceptions=True)
 
-    print("DONE\n")
-
-    print("====ONLINE====")
-    for (site, _) in online:
-        print(site)
-
-    print()
-
-    print("====OFFLINE====")
-    for (site, status) in offline:
-        print(site, f"(STATUS: {status})")
+    print("DONE")
 
 
 def edit_services_file():
     services_file = get_services_file_abspath()
-    os.system(f"/usr/bin/editor {services_file}")
+    os.system(f"{EDITOR_CMD} {services_file}")
 
 
 if __name__ == "__main__":
@@ -65,7 +59,11 @@ if __name__ == "__main__":
     option = sys.argv[1]
 
     if option == "check":
-        check_services()
+        t0 = time.time()
+        asyncio.run(check_services())
+        t1 = time.time()
+
+        print(f"Finished in {t1 - t0} seconds")
     elif option == "edit":
         edit_services_file()
     else:

@@ -50,13 +50,33 @@ def edit_services_file():
     os.system(f"{EDITOR_CMD} {services_file}")
 
 
-if __name__ == "__main__":
-    expected_args = 2
-    if len(sys.argv) != expected_args:
-        raise Exception(
-            f"invalid number of arguments: expected {expected_args}, got {len(sys.argv)}")
+def list_services():
+    services_file = get_services_file_abspath()
+    with open(services_file) as f:
+        contents = f.read()
+        print(contents)
 
-    option = sys.argv[1]
+
+def print_help_menu():
+    text = """=====HELP=====
+`CMD check` checks all the services in the service file
+`CMD edit` opens the serviecs file in the default sytem editor (at /usr/bin/editor)
+`CMD ls` lists all services in the service file
+`CMD help` displays this menu
+
+where CMD is the command to execute this script
+"""
+    print(text)
+
+
+if __name__ == "__main__":
+    expected_args = 1
+    args = sys.argv[1:]
+    if len(args) != expected_args:
+        raise Exception(
+            f"invalid number of arguments: expected {expected_args}, got {len(args)}")
+
+    option = args[0]
 
     if option == "check":
         t0 = time.time()
@@ -66,5 +86,10 @@ if __name__ == "__main__":
         print(f"Finished in {t1 - t0} seconds")
     elif option == "edit":
         edit_services_file()
+    elif option == "ls":
+        list_services()
+    elif option == "help":
+        print_help_menu()
     else:
-        raise Exception(f"invalid option: {option}")
+        raise Exception(
+            f"invalid option: {option}, use help for a list of commands")

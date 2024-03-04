@@ -32,7 +32,7 @@ async def check_services():
         print("DONE")
         return
 
-    print("CHECKING SERVICES...")
+    print("=====CHECKING SERVICES=====")
 
     lines = []
     with open(services_file, "r") as f:
@@ -41,8 +41,6 @@ async def check_services():
     async with aiohttp.ClientSession() as session:
         tasks = [check_service(session, line.strip()) for line in lines]
         await asyncio.gather(*tasks, return_exceptions=True)
-
-    print("DONE")
 
 
 def edit_services_file():
@@ -72,24 +70,33 @@ where CMD is the command to execute this script
 if __name__ == "__main__":
     expected_args = 1
     args = sys.argv[1:]
-    if len(args) != expected_args:
-        raise Exception(
-            f"invalid number of arguments: expected {expected_args}, got {len(args)}")
+    if len(args) == 0:
+        print_help_menu()
+        exit(0)
+    elif len(args) != expected_args:
+        print(
+            f"error: invalid number of arguments: expected {expected_args}, got {len(args)}")
+        exit(1)
 
     option = args[0]
 
-    if option == "check":
-        t0 = time.time()
-        asyncio.run(check_services())
-        t1 = time.time()
+    try:
+        if option == "check":
+            t0 = time.time()
+            asyncio.run(check_services())
+            t1 = time.time()
 
-        print(f"Finished in {t1 - t0} seconds")
-    elif option == "edit":
-        edit_services_file()
-    elif option == "ls":
-        list_services()
-    elif option == "help":
-        print_help_menu()
-    else:
-        raise Exception(
-            f"invalid option: {option}, use help for a list of commands")
+            print(f"Finished in {t1 - t0} seconds")
+        elif option == "edit":
+            edit_services_file()
+        elif option == "ls":
+            list_services()
+        elif option == "help":
+            print_help_menu()
+        else:
+            print(
+                f"error: invalid option: {option}, use `help` for a list of commands")
+            exit(1)
+    except Exception as e:
+        print(f"error: {e}")
+        exit(1)
